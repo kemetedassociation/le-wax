@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Le Wax — Cuisine Sénégalaise · Besançon</title>
+  <meta name="description" content="Restaurant sénégalais à Besançon. Thiéboudienne, Yassa, Dibi — la teranga dans l'assiette.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Reset & base ──────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+    body { background: #080706; color: #B8B09E; font-family: 'Jost', sans-serif; font-weight: 300; overflow-x: hidden; }
+    ::selection { background: rgba(201,162,39,.35); color: #F5EFDE; }
+    /* ── Vidéos décoratives — non interactives ─────────── */
+    video { pointer-events: none; }
+
+    /* ── Hero video — GPU compositing pour le parallaxe ── */
+    #hero-video { will-change: transform; }
+
+
+    /* ── Typographie ────────────────────────────────── */
+    .serif   { font-family: 'Cormorant Garamond', serif; }
+    .gold    { color: #C9A227; }
+    .cream   { color: #F5EFDE; }
+    .muted   { color: #7E786C; }
+
+    /* ── Barre de progression ───────────────────────── */
+    #prog-bar {
+      position: fixed; top: 0; left: 0; z-index: 200;
+      height: 2px; width: 0%;
+      background: linear-gradient(90deg, #9A7B1C, #E4C56A, #C9A227);
+      transition: width .1s linear;
+    }
+
+    /* ── Navigation ─────────────────────────────────── */
+    #site-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px clamp(20px,5vw,60px);
+      background: transparent;
+      border-bottom: 1px solid transparent;
+      transition: background .5s, border-color .5s, backdrop-filter .5s;
+    }
+    #site-nav.scrolled {
+      background: rgba(8,7,6,.9);
+      border-bottom-color: rgba(201,162,39,.18);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .nav-logo { text-decoration: none; line-height: 1; display: inline-flex; align-items: center; }
+    .nav-logo img { height: 52px; width: auto; }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+      padding: 10px 22px; border: 1px solid rgba(201,162,39,.5); border-radius: 100px;
+      color: #F0E9D6; font-size: 13px; letter-spacing: 1.5px;
+      transition: background .3s, border-color .3s;
+    }
+    .nav-cta:hover { background: rgba(201,162,39,.1); border-color: #C9A227; }
+
+    /* ── Séparateur doré ────────────────────────────── */
+    .gold-rule {
+      display: inline-flex; align-items: center; gap: 12px;
+      font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: #C9A227;
+    }
+    .gold-rule::before, .gold-rule::after {
+      content: ''; display: block; height: 1px; width: 28px;
+      background: linear-gradient(90deg, transparent, #C9A227);
+    }
+    .gold-rule::after { background: linear-gradient(90deg, #C9A227, transparent); }
+
+    /* ──────────────────────────────────────────────────
+       SCROLLYTELLING — mécanique centrale
+       Chaque .chapter = une scène sticky + panels texte
+    ────────────────────────────────────────────────── */
+    .chapter {
+      position: relative;
+    }
+
+    /* Vidéo de fond collante */
+    .chapter-bg {
+      position: sticky; top: 0;
+      width: 100%; height: 100vh;
+      overflow: hidden;
+      margin-bottom: -100vh; /* pull back so text panels overlay it */
+      z-index: 0;
+      opacity: 0;
+      transition: opacity 1.1s cubic-bezier(.22,.61,.36,1);
+    }
+    .chapter-bg.ch-visible { opacity: 1; }
+
+    /* Vignette sombre en bas de chaque bg pour fondu vers le chapitre suivant */
+    .chapter-bg::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 30vh;
+      background: linear-gradient(0deg, rgba(8,7,6,.95) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .chapter-bg video,
+    .chapter-bg img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .chapter-bg-overlay {
+      position: absolute; inset: 0;
+    }
+
+    /* Conteneur des panels texte */
+    .chapter-panels {
+      position: relative; z-index: 10;
+    }
+
+    /* Un panel = une "page" de l'histoire */
+    .panel {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      padding: 0 clamp(24px,6vw,120px);
+    }
+    .panel-inner {
+      max-width: 680px;
+    }
+    /* Chaque enfant direct s'anime individuellement en cascade */
+    .panel-inner > * {
+      opacity: 0;
+      transform: translateY(26px);
+      transition: opacity .85s cubic-bezier(.22,.61,.36,1), transform .85s cubic-bezier(.22,.61,.36,1);
+    }
+    .panel-inner.visible > * { opacity: 1; transform: none; }
+    .panel-inner.visible > *:nth-child(1) { transition-delay: 0s; }
+    .panel-inner.visible > *:nth-child(2) { transition-delay: .18s; }
+    .panel-inner.visible > *:nth-child(3) { transition-delay: .34s; }
+    .panel-inner.visible > *:nth-child(4) { transition-delay: .48s; }
+    .panel-inner.visible > *:nth-child(5) { transition-delay: .60s; }
+    .panel.center { justify-content: center; text-align: center; }
+    .panel.center .panel-inner { max-width: 860px; }
+    .panel.right  { justify-content: flex-end; }
+
+    /* Chapitre numéro */
+    .chapter-num {
+      font-size: 10px; letter-spacing: 5px; text-transform: uppercase;
+      color: #C9A227; margin-bottom: 16px; display: block;
+    }
+
+    /* Grand titre de chapitre */
+    .chapter-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600; line-height: .95; color: #F5EFDE;
+      font-size: clamp(52px, 8vw, 110px);
+      letter-spacing: -1px;
+      margin-bottom: 28px;
+    }
+    .chapter-title em {
+      font-style: italic; font-weight: 400; color: #C9A227;
+    }
+
+    /* Texte narratif */
+    .chapter-body {
+      font-size: clamp(16px, 1.6vw, 20px);
+      font-weight: 300; line-height: 1.85; color: #C8C0B0;
+      margin-bottom: 24px;
+    }
+    .chapter-body + .chapter-body { margin-top: 0; }
+
+    /* Quote stylisée */
+    .blockquote {
+      border-left: 2px solid #C9A227; padding-left: 22px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(20px, 2.4vw, 28px);
+      font-style: italic; color: #D4C89A; line-height: 1.5;
+      margin: 32px 0;
+    }
+
+    /* Capsule étiquette plat */
+    .dish-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border: 1px solid rgba(201,162,39,.4);
+      border-radius: 100px; font-size: 12px; letter-spacing: 2px;
+      text-transform: uppercase; color: #C9A227;
+      margin-bottom: 20px;
+    }
+
+    /* ── HERO spécial ────────────────────────────────── */
+    #hero {
+      position: relative;
+      height: 100vh;
+      display: flex; align-items: flex-end;
+      overflow: hidden;
+    }
+    #hero-video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    #hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(8,7,6,.1) 0%,
+        rgba(8,7,6,.4) 40%,
+        rgba(8,7,6,.85) 80%,
+        rgba(8,7,6,1)   100%
+      );
+    }
+    .hero-content {
+      position: relative; z-index: 2;
+      padding: 0 clamp(24px,6vw,100px) clamp(60px,8vw,100px);
+      width: 100%;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 14px;
+      font-size: 12px; letter-spacing: 5px; text-transform: uppercase;
+      color: #C9A227; margin-bottom: 20px;
+    }
+    .hero-eyebrow span { width: 28px; height: 1px; background: #C9A227; }
+    .hero-title {
+      font-family: 'Cormorant Garamond', serif; font-weight: 600;
+      font-size: clamp(80px, 18vw, 240px); line-height: .88;
+      letter-spacing: -3px; color: #F5EFDE;
+      margin-bottom: 22px;
+    }
+    .hero-sub {
+      max-width: 560px; font-size: clamp(16px,1.8vw,20px);
+      font-weight: 300; line-height: 1.7; color: #C0B8A8;
+    }
+    .hero-ctas {
+      display: flex; flex-wrap: wrap; gap: 14px; margin-top: 36px;
+    }
+    .btn-gold {
+      display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+      padding: 16px 34px; border-radius: 100px;
+      background: linear-gradient(135deg,#E4C56A,#C9A227 60%,#9A7B1C);
+      color: #100C02; font-weight: 500; font-size: 13px;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      box-shadow: 0 12px 36px -12px rgba(201,162,39,.55);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -12px rgba(201,162,39,.65); }
+    .btn-outline {
+      display: inline-flex; align-items: center; text-decoration: none;
+      padding: 16px 34px; border-radius: 100px;
+      border: 1px solid rgba(240,233,214,.3); color: #F0E9D6;
+      font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase;
+      transition: border-color .3s, background .3s;
+    }
+    .btn-outline:hover { border-color: rgba(201,162,39,.6); background: rgba(201,162,39,.06); }
+
+    /* Flèche scroll hero */
+    @keyframes arrow-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+    .scroll-hint {
+      position: absolute; bottom: 28px; left: 50%;
+      transform: translateX(-50%); z-index: 3;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: rgba(240,233,214,.4);
+    }
+    .scroll-hint svg { animation: arrow-bob 2.2s ease-in-out infinite; }
+
+    /* ── Transitions vidéo inter-chapitres ──────────── */
+    .fade-video {
+      transition: opacity .8s ease;
+    }
+    .fade-video.fading { opacity: 0; }
+
+    /* ── Interlude stat / chiffre ────────────────────── */
+    .stat-band {
+      background: rgba(201,162,39,.06);
+      border-top: 1px solid rgba(201,162,39,.14);
+      border-bottom: 1px solid rgba(201,162,39,.14);
+      padding: clamp(48px,6vw,80px) clamp(24px,6vw,80px);
+      display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: center;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-family: 'Cormorant Garamond', serif; font-size: clamp(52px,7vw,88px);
+      font-weight: 600; color: #C9A227; line-height: 1;
+    }
+    .stat-label {
+      font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+      color: #7E786C; margin-top: 6px;
+    }
+
+    /* ── Section Menu complet ───────────────────────── */
+    #menu-section {
+      padding: clamp(80px,10vw,140px) clamp(24px,6vw,80px);
+      background: #080706;
+      background-image:
+        radial-gradient(rgba(201,162,39,.05) 1px, transparent 1px),
+        radial-gradient(rgba(201,162,39,.03) 1px, transparent 1px);
+      background-size: 46px 46px, 46px 46px;
+      background-position: 0 0, 23px 23px;
+    }
+    .menu-grid {
+      max-width: 1200px; margin: 60px auto 0;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+      gap: 2px;
+    }
+    .menu-card {
+      position: relative; overflow: hidden; aspect-ratio: 4/3;
+      cursor: default;
+    }
+    .menu-card img, .menu-card video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      transition: transform .7s cubic-bezier(.22,.61,.36,1);
+    }
+    .menu-card:hover img, .menu-card:hover video { transform: scale(1.06); }
+    .menu-card-info {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 28px 24px 22px;
+      background: linear-gradient(transparent, rgba(8,7,6,.88));
+    }
+    .menu-card-num { font-size: 10px; letter-spacing: 3px; color: #C9A227; text-transform: uppercase; }
+    .menu-card-name {
+      font-family: 'Cormorant Garamond', serif; font-size: clamp(22px,2.5vw,30px);
+      font-weight: 600; color: #F5EFDE; margin: 6px 0 4px; line-height: 1.1;
+    }
+    .menu-card-desc { font-size: 13px; color: #9A9488; line-height: 1.5; }
+
+    /* ── Galerie finale ─────────────────────────────── */
+    #galerie-section {
+      padding: clamp(60px,8vw,110px) clamp(24px,6vw,60px);
+      background: linear-gradient(180deg,#0C0B09,#080706);
+    }
+    .gallery-masonry {
+      max-width: 1400px; margin: 50px auto 0;
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      grid-auto-rows: 200px;
+      gap: 8px;
+    }
+    .g-cell { position: relative; overflow: hidden; }
+    .g-cell img, .g-cell video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      transition: transform .6s ease;
+    }
+    .g-cell:hover img, .g-cell:hover video { transform: scale(1.05); }
+    .g-cell::after {
+      content: ''; position: absolute; inset: 0;
+      border: 1px solid rgba(201,162,39,.22); pointer-events: none;
+    }
+    .gc2 { grid-column: span 2; }
+    .gr2 { grid-row:    span 2; }
+
+    @media (max-width: 700px) {
+      .gallery-masonry { grid-template-columns: 1fr 1fr; grid-auto-rows: 140px; }
+      .gr2 { grid-row: span 1; }
+    }
+
+    /* ── Section Contact ────────────────────────────── */
+    #contact-section {
+      padding: clamp(80px,10vw,140px) clamp(24px,6vw,80px);
+      background: #080706;
+      background-image:
+        radial-gradient(rgba(201,162,39,.05) 1px, transparent 1px),
+        radial-gradient(rgba(201,162,39,.03) 1px, transparent 1px);
+      background-size: 46px 46px, 46px 46px;
+      background-position: 0 0, 23px 23px;
+    }
+    .contact-wrap {
+      max-width: 1180px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: clamp(40px,6vw,80px); align-items: center;
+    }
+    .map-card {
+      flex: 1 1 360px; min-width: min(100%,320px);
+      aspect-ratio: 1;
+      border: 1px solid rgba(201,162,39,.28);
+      background: radial-gradient(120% 120% at 50% 30%, #131210, #080706);
+      position: relative; overflow: hidden;
+    }
+    .map-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(201,162,39,.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,162,39,.07) 1px, transparent 1px);
+      background-size: 38px 38px;
+    }
+    .map-pin {
+      position: absolute; top: 42%; left: 50%; transform: translateX(-50%);
+    }
+    .map-label {
+      position: absolute; bottom: 20px; left: 20px; right: 20px;
+      padding: 14px 16px; border: 1px solid rgba(201,162,39,.22);
+      background: rgba(8,7,6,.75); backdrop-filter: blur(6px);
+    }
+
+    /* ── Footer ─────────────────────────────────────── */
+    footer {
+      background: #050504;
+      border-top: 1px solid rgba(201,162,39,.12);
+      padding: clamp(48px,7vw,88px) clamp(24px,6vw,80px) 36px;
+    }
+    .footer-grid {
+      max-width: 1180px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: clamp(32px,5vw,64px); justify-content: space-between;
+    }
+    .footer-copy {
+      max-width: 1180px; margin: clamp(36px,4vw,56px) auto 0;
+      padding-top: 22px; border-top: 1px solid rgba(255,255,255,.05);
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between;
+      font-size: 12px; color: #4A4640; letter-spacing: .4px;
+    }
+
+    /* ── Reveal générique ───────────────────────────── */
+    [data-reveal] {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity .9s cubic-bezier(.22,.61,.36,1), transform .9s cubic-bezier(.22,.61,.36,1);
+    }
+    [data-reveal].visible { opacity: 1; transform: none; }
+
+    /* ── Responsive panels ───────────────────────────── */
+    @media (max-width: 768px) {
+      .chapter-title { font-size: clamp(44px,12vw,72px); }
+      .panel { padding: 0 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="prog-bar"></div>
+
+<!-- ══════════════════════════════════════════════════
+     NAVIGATION
+══════════════════════════════════════════════════ -->
+<nav id="site-nav">
+  <a href="#hero" class="nav-logo" aria-label="Le Wax — Restaurant Sénégalais">
+    <img src="uploads/WAX0.jpg" alt="Le Wax">
+  </a>
+  <a href="tel:+33769510041" class="nav-cta">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    07 69 51 00 41
+  </a>
+</nav>
+
+<!-- ══════════════════════════════════════════════════
+     HERO — WAXv5 plein écran
+══════════════════════════════════════════════════ -->
+<section id="hero">
+  <video id="hero-video" autoplay muted loop playsinline preload="auto" poster="uploads/WAX6.jpg">
+    <source src="uploads/WAXv5.mp4"  type="video/mp4">
+  </video>
+  <div id="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span></span>Besançon · Dakar dans l'assiette<span></span>
+    </div>
+    <h1 class="hero-title">Le Wax</h1>
+    <p class="hero-sub">La cuisine sénégalaise dans ce qu'elle a de plus généreux — tradition vivante, épices justes et l'hospitalité de la teranga.</p>
+    <div class="hero-ctas">
+      <a href="tel:+33769510041" class="btn-gold">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Commander maintenant
+      </a>
+      <a href="#origine" class="btn-outline">Découvrir l'histoire</a>
+    </div>
+  </div>
+  <div class="scroll-hint" aria-hidden="true">
+    Scroll
+    <svg width="16" height="22" viewBox="0 0 16 22" fill="none" stroke="#C9A227" stroke-width="1.4" stroke-linecap="round"><path d="M8 2v16M2 12l6 6 6-6"/></svg>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     CHAPITRE 0 — L'Origine
+     Vidéo : WAXv1 — ambiance générale restaurant
+══════════════════════════════════════════════════ -->
+<section class="chapter" id="origine">
+  <div class="chapter-bg">
+    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX9.jpg">
+      <source src="uploads/WAXv1.mp4"  type="video/mp4">
+    </video>
+    <div class="chapter-bg-overlay" style="background:linear-gradient(90deg,rgba(8,7,6,.82) 0%,rgba(8,7,6,.45) 60%,rgba(8,7,6,.1) 100%);"></div>
+  </div>
+  <div class="chapter-panels">
+
+    <div class="panel">
+      <div class="panel-inner">
+        <span class="chapter-num">Prologue</span>
+        <h2 class="chapter-title">Une mémoire<br><em>dans l'assiette</em></h2>
+        <p class="chapter-body">Tout commence là-bas. Dans une cour de Dakar où la fumée des braises se mêle aux épices, où les marmites sont larges comme des promesses et où chaque repas rassemble la famille autour d'un bol commun. C'est cette image que Le Wax porte jusqu'à Besançon.</p>
+        <p class="chapter-body">Pas une imitation. Une transmission.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-inner">
+        <div class="blockquote">
+          « La teranga, c'est l'art sénégalais de l'accueil. Recevoir l'autre comme un don, le nourrir comme un acte d'amour. »
+        </div>
+        <p class="chapter-body">Le savoir-faire du Wax ne s'invente pas. Il se transmet de main en main, de génération en génération — les gestes précis pour doser le thiof séché, la patience pour laisser infuser le bouillon, l'œil qui reconnaît quand le riz a absorbé toute la saveur du fond de marmite.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     CHAPITRE 1 — Le Thiéboudienne
+     Vidéo : WAXv3
+══════════════════════════════════════════════════ -->
+<section class="chapter" id="thieb">
+  <div class="chapter-bg">
+    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX12.jpg">
+      <source src="uploads/WAXv3.mp4"  type="video/mp4">
+    </video>
+    <div class="chapter-bg-overlay" style="background:radial-gradient(ellipse at 30% 60%, rgba(8,7,6,.15), rgba(8,7,6,.7) 60%);"></div>
+  </div>
+  <div class="chapter-panels">
+
+    <div class="panel">
+      <div class="panel-inner">
+        <div class="dish-tag">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#C9A227"><circle cx="12" cy="12" r="4"/></svg>
+          01 · Plat national
+        </div>
+        <h2 class="chapter-title">Thiébou&shy;dienne</h2>
+        <p class="chapter-body">En wolof, <em style="color:#C9A227;">tiéb</em> veut dire riz, <em style="color:#C9A227;">djen</em> veut dire poisson. Simple. Mais derrière cette simplicité se cache une alchimie redoutable : le riz qui absorbe le fond de cuisson du poisson, les légumes qui se fondent dans le bouillon, le tout qui caramélise doucement en une croûte dorée — le <em style="color:#C9A227;">xoon</em>.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-inner">
+        <div class="blockquote">
+          « Chaque thiéboudienne est une signature. Elle porte la main de celle qui l'a cuisinée, les épices de sa région, le souvenir de sa mère. »
+        </div>
+        <p class="chapter-body">Au Wax, le thiéboudienne mijote plusieurs heures. Le poisson — thiof ou dorade — est farci de persil, d'ail et d'épices avant d'être saisi puis déposé sur le riz gonflé de saveur. Le résultat est un plat total : parfumé, généreux, inoubliable.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     CHAPITRE 2 — Le Yassa
+     Vidéo : WAXv9
+══════════════════════════════════════════════════ -->
+<section class="chapter" id="yassa">
+  <div class="chapter-bg">
+    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX3.jpg">
+      <source src="uploads/WAXv9.mp4"  type="video/mp4">
+    </video>
+    <div class="chapter-bg-overlay" style="background:linear-gradient(90deg,rgba(8,7,6,.1) 0%,rgba(8,7,6,.65) 55%,rgba(8,7,6,.85) 100%);"></div>
+  </div>
+  <div class="chapter-panels">
+
+    <div class="panel right">
+      <div class="panel-inner">
+        <div class="dish-tag">02 · Signature</div>
+        <h2 class="chapter-title">Yassa<br><em>Poulet</em></h2>
+        <p class="chapter-body">Le yassa est né en Casamance, au sud du Sénégal, dans la région des mangroves et des jardins fruitiers. Son secret : une marinade au citron vert qui attendrit la chair du poulet pendant des heures avant de le griller à la braise.</p>
+      </div>
+    </div>
+
+    <div class="panel right">
+      <div class="panel-inner">
+        <p class="chapter-body">Puis vient la magie des oignons. Des kilos d'oignons fondus à feu doux jusqu'à la confiture — sucrés, acidulés, irrésistibles. Le poulet y retourne mijoter. Ce plat réconcilie les contraires : la brûlure du citron, la douceur des oignons, le mordant de la moutarde.</p>
+        <div class="blockquote">
+          « Acidulé, enveloppant, réconfortant — le yassa est la caresse après la tempête. »
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     CHAPITRE 3 — Le Dibi
+     Vidéo : WAXv11
+══════════════════════════════════════════════════ -->
+<section class="chapter" id="dibi">
+  <div class="chapter-bg">
+    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX1.jpg">
+      <source src="uploads/WAXv11.mp4"  type="video/mp4">
+    </video>
+    <div class="chapter-bg-overlay" style="background:radial-gradient(ellipse at 70% 50%, rgba(8,7,6,.2), rgba(8,7,6,.75) 65%);"></div>
+  </div>
+  <div class="chapter-panels">
+
+    <div class="panel">
+      <div class="panel-inner">
+        <div class="dish-tag">03 · De la braise</div>
+        <h2 class="chapter-title">Dibi —<br><em>le feu sacré</em></h2>
+        <p class="chapter-body">À Dakar, le dibi se mange debout, la nuit, au coin d'une rue. Le <em style="color:#C9A227;">dibiterie</em> — le boucher-grilladin — taille la viande d'agneau à la volée, la jette sur des braises vives et la retourne d'un geste expert. Pas de fioritures. La fumée, la chair, le sel.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-inner">
+        <p class="chapter-body">Au Wax, ce rituel urbain de Dakar est honoré dans les règles : viande grillée à point, oignons fondus, moutarde relevée et un soupçon de poivre noir qui monte. Une adresse directe aux sens, sans détour.</p>
+        <div class="blockquote">
+          « Le dibi, c'est la preuve que la simplicité peut être un sommet. »
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     CHAPITRE 4 — Le Mafé
+     Vidéo : WAXv10
+══════════════════════════════════════════════════ -->
+<section class="chapter" id="mafe">
+  <div class="chapter-bg">
+    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX5.jpg">
+      <source src="uploads/WAXv10.mp4"  type="video/mp4">
+    </video>
+    <div class="chapter-bg-overlay" style="background:linear-gradient(135deg, rgba(8,7,6,.8) 0%, rgba(8,7,6,.3) 50%, rgba(8,7,6,.7) 100%);"></div>
+  </div>
+  <div class="chapter-panels">
+
+    <div class="panel center">
+      <div class="panel-inner" style="max-width:740px;">
+        <div class="dish-tag" style="margin:0 auto 20px;">04 · Onctueux</div>
+        <h2 class="chapter-title" style="font-size:clamp(50px,9vw,120px);">Mafé</h2>
+        <p class="chapter-body" style="text-align:center;">La pâte d'arachide. Dorée, dense, enveloppante. Elle fond dans le bouillon avec des morceaux de viande tendre et des épices douces. Le mafé est un plat de patience et de profondeur — on le laisse mijoter jusqu'à ce que la sauce devienne soyeuse, presque sucrée.</p>
+        <div class="blockquote" style="border-left:none; border-top:1px solid rgba(201,162,39,.4); border-bottom:1px solid rgba(201,162,39,.4); padding:22px 0; text-align:center;">
+          « Il faut saucer le mafé jusqu'à la dernière goutte. C'est une règle. »
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     CHAPITRE 5 — Les douceurs
+     Vidéo : WAXv7
+══════════════════════════════════════════════════ -->
+<section class="chapter" id="desserts">
+  <div class="chapter-bg">
+    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX8.jpg">
+      <source src="uploads/WAXv7.mp4"  type="video/mp4">
+    </video>
+    <div class="chapter-bg-overlay" style="background:linear-gradient(180deg, rgba(8,7,6,.2) 0%, rgba(8,7,6,.6) 60%, rgba(8,7,6,.9) 100%);"></div>
+  </div>
+  <div class="chapter-panels">
+
+    <div class="panel">
+      <div class="panel-inner">
+        <div class="dish-tag">Les douceurs · Fin de repas</div>
+        <h2 class="chapter-title">Les saveurs<br><em>de Dakar</em></h2>
+        <p class="chapter-body">Un repas sénégalais ne se termine pas — il se prolonge. D'abord le <em style="color:#C9A227;">thiakry</em> : ce dessert de couscous de mil, yaourt crémeux, raisins secs et noix de coco râpée qui rappelle les goûters d'enfance à Dakar.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-inner">
+        <p class="chapter-body">Puis les accras dorés, croustillants dehors et fondants dedans. Les pastels farcis au thon épicé. Et pour couronner le tout : le <em style="color:#C9A227;">bissap</em>, cette infusion écarlate d'hibiscus glacée, légèrement sucrée, acidulée — la boisson des rois et des familles.</p>
+        <div class="blockquote">
+          « Le bissap rouge sang dans un grand verre de glace pilée — c'est l'été de Dakar qui traverse l'Atlantique. »
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     INTERLUDE CHIFFRES
+══════════════════════════════════════════════════ -->
+<div class="stat-band" data-reveal>
+  <div class="stat-item">
+    <div class="stat-num serif">12+</div>
+    <div class="stat-label">Plats et spécialités</div>
+  </div>
+  <div style="width:1px; height:60px; background:rgba(201,162,39,.2);"></div>
+  <div class="stat-item">
+    <div class="stat-num serif">100%</div>
+    <div class="stat-label">Recettes transmises</div>
+  </div>
+  <div style="width:1px; height:60px; background:rgba(201,162,39,.2);"></div>
+  <div class="stat-item">
+    <div class="stat-num serif">1</div>
+    <div class="stat-label">Rue du Petit Charmont</div>
+  </div>
+  <div style="width:1px; height:60px; background:rgba(201,162,39,.2);"></div>
+  <div class="stat-item">
+    <div class="stat-num serif">11h</div>
+    <div class="stat-label">Du matin — 7j/7*</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MENU COMPLET — Grille visuelle
+══════════════════════════════════════════════════ -->
+<section id="menu-section">
+  <div style="max-width:1200px; margin:0 auto; text-align:center;">
+    <div class="gold-rule" data-reveal>Nos spécialités</div>
+    <h2 class="serif" data-reveal style="font-size:clamp(42px,6vw,88px); font-weight:600; color:#F5EFDE; line-height:1; margin-top:18px;">Les plats signature</h2>
+  </div>
+
+  <div class="menu-grid" data-reveal>
+
+    <div class="menu-card">
+      <img loading="lazy" decoding="async" src="uploads/WAX12.jpg" alt="Thiéboudienne">
+      <div class="menu-card-info">
+        <div class="menu-card-num">01 · Poisson</div>
+        <div class="menu-card-name">Thiéboudienne</div>
+        <div class="menu-card-desc">Riz au poisson, légumes, bouillon parfumé</div>
+      </div>
+    </div>
+
+    <div class="menu-card">
+      <video preload="metadata" src="uploads/WAXv8.mp4" autoplay muted loop playsinline poster="uploads/WAX3.jpg"></video>
+      <div class="menu-card-info">
+        <div class="menu-card-num">02 · Volaille</div>
+        <div class="menu-card-name">Yassa Poulet</div>
+        <div class="menu-card-desc">Oignons confits, citron vert, moutarde</div>
+      </div>
+    </div>
+
+    <div class="menu-card">
+      <img loading="lazy" decoding="async" src="uploads/WAX5.jpg" alt="Mafé">
+      <div class="menu-card-info">
+        <div class="menu-card-num">03 · Viande</div>
+        <div class="menu-card-name">Mafé</div>
+        <div class="menu-card-desc">Ragoût à la pâte d'arachide, épices douces</div>
+      </div>
+    </div>
+
+    <div class="menu-card">
+      <video preload="metadata" src="uploads/WAXv9.mp4" autoplay muted loop playsinline poster="uploads/WAX2.jpg"></video>
+      <div class="menu-card-info">
+        <div class="menu-card-num">04 · Braise</div>
+        <div class="menu-card-name">Dibi</div>
+        <div class="menu-card-desc">Agneau grillé, oignons, moutarde relevée</div>
+      </div>
+    </div>
+
+    <div class="menu-card">
+      <img loading="lazy" decoding="async" src="uploads/WAX4.jpg" alt="Accras & Pastels">
+      <div class="menu-card-info">
+        <div class="menu-card-num">05 · Entrées</div>
+        <div class="menu-card-name">Accras · Pastels</div>
+        <div class="menu-card-desc">Beignets croustillants, farce thon épicé</div>
+      </div>
+    </div>
+
+    <div class="menu-card">
+      <video preload="metadata" src="uploads/WAXv10.mp4" autoplay muted loop playsinline poster="uploads/WAX7.jpg"></video>
+      <div class="menu-card-info">
+        <div class="menu-card-num">06 · Douceurs</div>
+        <div class="menu-card-name">Thiakry · Bissap</div>
+        <div class="menu-card-desc">Couscous de mil, hibiscus glacé</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     GALERIE IMMERSIVE
+══════════════════════════════════════════════════ -->
+<section id="galerie-section">
+  <div style="max-width:1400px; margin:0 auto; text-align:center;">
+    <div class="gold-rule" data-reveal>L'ambiance</div>
+    <h2 class="serif" data-reveal style="font-size:clamp(40px,6vw,80px); font-weight:600; color:#F5EFDE; line-height:1; margin-top:16px;">Notre table en images</h2>
+  </div>
+
+  <div class="gallery-masonry" style="margin-top:50px;" data-reveal>
+    <div class="g-cell gc2 gr2">
+      <video preload="metadata" src="uploads/WAXv11.mp4" autoplay muted loop playsinline poster="uploads/WAX12.jpg"></video>
+    </div>
+    <div class="g-cell">
+      <img loading="lazy" decoding="async" src="uploads/WAX9.jpg" alt="Homard grillé">
+    </div>
+    <div class="g-cell">
+      <img loading="lazy" decoding="async" src="uploads/WAX8.jpg" alt="Plateau de fruits">
+    </div>
+    <div class="g-cell">
+      <img loading="lazy" decoding="async" src="uploads/WAX11.jpg" alt="Crevettes grillées">
+    </div>
+    <div class="g-cell">
+      <video src="uploads/WAXv12.mp4" autoplay muted loop playsinline preload="metadata" poster="uploads/WAX1.jpg"></video>
+    </div>
+    <div class="g-cell gc2">
+      <img loading="lazy" decoding="async" src="uploads/WAX10.jpg" alt="Table traiteur">
+    </div>
+    <div class="g-cell">
+      <img loading="lazy" decoding="async" src="uploads/WAX2.jpg" alt="Dibi partagé">
+    </div>
+    <div class="g-cell">
+      <img loading="lazy" decoding="async" src="uploads/WAX7.jpg" alt="Douceurs">
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     CONTACT
+══════════════════════════════════════════════════ -->
+<section id="contact-section">
+  <div class="contact-wrap">
+
+    <div data-reveal style="flex:1 1 360px; min-width:min(100%,320px);">
+      <div class="gold-rule" style="margin-bottom:22px;">Réservez votre table</div>
+      <h2 class="serif" style="font-size:clamp(36px,5vw,66px); font-weight:600; line-height:1.02; color:#F5EFDE; margin-bottom:28px;">Venez,<br>ou commandez<br>à emporter.</h2>
+
+      <div style="display:flex; align-items:flex-start; gap:14px; margin-bottom:16px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px;flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div>
+          <div style="color:#F0E9D6; font-size:17px; font-weight:400;">1 Rue du Petit Charmont</div>
+          <div style="color:#9A9488; font-size:15px; margin-top:2px;">25000 Besançon</div>
+          <a href="https://www.google.com/maps/search/?api=1&query=1+Rue+du+Petit+Charmont+25000+Besan%C3%A7on" target="_blank" rel="noopener" style="display:inline-block; margin-top:8px; color:#C9A227; font-size:13px; letter-spacing:1px; text-decoration:none; border-bottom:1px solid rgba(201,162,39,.4);">Voir sur Google Maps →</a>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:36px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <div style="color:#9A9488; font-size:15px;">Jeudi–Mardi · <span style="color:#F0E9D6;">11:00 – 21:30</span> · Mer : Fermé</div>
+      </div>
+
+      <a href="tel:+33769510041" class="btn-gold" style="font-size:14px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        07 69 51 00 41
+      </a>
+    </div>
+
+    <!-- Carte déco -->
+    <div class="map-card" data-reveal data-delay="150" style="flex:1 1 360px; min-width:min(100%,320px);">
+      <div class="map-grid"></div>
+      <div style="position:absolute; top:50%; left:15%; right:20%; height:1px; background:rgba(201,162,39,.2); transform:rotate(-18deg);"></div>
+      <div style="position:absolute; top:30%; left:0; width:70%; height:1px; background:rgba(201,162,39,.15); transform:rotate(24deg);"></div>
+      <div class="map-pin">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 6px 14px rgba(201,162,39,.45));"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="map-label">
+        <div class="serif" style="font-size:19px; color:#F0E9D6;">Le Wax</div>
+        <div style="font-size:13px; color:#9A9488; margin-top:3px;">1 Rue du Petit Charmont, Besançon</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-grid">
+
+    <div style="flex:1 1 220px;">
+      <video src="uploads/WAXv0.mp4" autoplay muted loop playsinline poster="uploads/WAX0.jpg"
+        style="height:80px; width:80px; object-fit:cover; border-radius:50%; display:block; margin-bottom:12px;"></video>
+      <div style="font-size:9px; letter-spacing:4px; text-transform:uppercase; color:#C9A227; margin-bottom:18px;">Cuisine Sénégalaise · Besançon</div>
+      <p style="max-width:260px; font-size:14px; font-weight:300; line-height:1.7; color:#5F5A50;">La teranga dans l'assiette. Commandes par téléphone, à emporter ou sur place.</p>
+      <div style="display:flex; gap:12px; margin-top:20px;">
+        <a href="#" aria-label="Instagram" style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(201,162,39,.3); border-radius:50%; color:#C9A227; transition:border-color .3s;" onmouseover="this.style.borderColor='#C9A227'" onmouseout="this.style.borderColor='rgba(201,162,39,.3)'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        </a>
+        <a href="#" aria-label="Facebook" style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(201,162,39,.3); border-radius:50%; color:#C9A227; transition:border-color .3s;" onmouseover="this.style.borderColor='#C9A227'" onmouseout="this.style.borderColor='rgba(201,162,39,.3)'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div style="flex:1 1 200px;">
+      <div style="font-size:11px; letter-spacing:3px; text-transform:uppercase; color:#C9A227; margin-bottom:16px;">Horaires</div>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:14px;">
+        <div style="display:flex; justify-content:space-between; max-width:240px;"><span style="color:#7E786C;">Lundi</span><span style="color:#F0E9D6;">11:00 – 21:30</span></div>
+        <div style="display:flex; justify-content:space-between; max-width:240px;"><span style="color:#7E786C;">Mardi</span><span style="color:#F0E9D6;">11:00 – 21:30</span></div>
+        <div style="display:flex; justify-content:space-between; max-width:240px;"><span style="color:#7E786C;">Mercredi</span><span style="color:#4A4640; font-style:italic;">Fermé</span></div>
+        <div style="display:flex; justify-content:space-between; max-width:240px;"><span style="color:#7E786C;">Jeudi</span><span style="color:#F0E9D6;">11:00 – 21:30</span></div>
+        <div style="display:flex; justify-content:space-between; max-width:240px;"><span style="color:#7E786C;">Vendredi</span><span style="color:#F0E9D6;">11:00 – 21:30</span></div>
+        <div style="display:flex; justify-content:space-between; max-width:240px;"><span style="color:#7E786C;">Samedi</span><span style="color:#F0E9D6;">11:00 – 21:30</span></div>
+        <div style="display:flex; justify-content:space-between; max-width:240px;"><span style="color:#7E786C;">Dimanche</span><span style="color:#F0E9D6;">11:00 – 21:00</span></div>
+      </div>
+    </div>
+
+    <div style="flex:1 1 200px;">
+      <div style="font-size:11px; letter-spacing:3px; text-transform:uppercase; color:#C9A227; margin-bottom:16px;">Nous trouver</div>
+      <div style="font-size:14px; line-height:1.85; color:#7E786C;">
+        1 Rue du Petit Charmont<br>25000 Besançon<br>
+        <a href="tel:+33769510041" style="display:inline-block; margin-top:10px; color:#F0E9D6; text-decoration:none; border-bottom:1px solid rgba(201,162,39,.4);">07 69 51 00 41</a>
+      </div>
+    </div>
+
+  </div>
+  <div class="footer-copy">
+    <span>© 2026 Le Wax — Tous droits réservés.</span>
+    <span>Restaurant sénégalais · Besançon</span>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ── Barre de progression + nav ───────────────────── */
+  var prog = document.getElementById('prog-bar');
+  var nav  = document.getElementById('site-nav');
+
+  function onScroll() {
+    var y = window.scrollY || 0;
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    if (prog) prog.style.width = (h > 0 ? (y / h) * 100 : 0) + '%';
+    if (nav)  nav.classList.toggle('scrolled', y > 60);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* ── IntersectionObserver : panels texte ─────────── */
+  var ioOpts = { threshold: 0.2 };
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        var delay = e.target.getAttribute('data-delay') || 0;
+        setTimeout(function () {
+          e.target.classList.add('visible');
+        }, Number(delay));
+      }
+    });
+  }, ioOpts);
+
+  /* panels scrollytelling */
+  document.querySelectorAll('.panel-inner').forEach(function (el) { io.observe(el); });
+  /* éléments génériques */
+  document.querySelectorAll('[data-reveal]').forEach(function (el) { io.observe(el); });
+
+  /* ── Parallaxe léger sur le hero ──────────────────── */
+  var heroVid = document.getElementById('hero-video');
+  function onScrollHero() {
+    if (!heroVid) return;
+    heroVid.style.transform = 'translateY(' + (window.scrollY * 0.18) + 'px) scale(1.06)';
+  }
+  window.addEventListener('scroll', onScrollHero, { passive: true });
+  onScrollHero(); // apply initial scale so hero never shows letterbox
+
+  /* ── Lecture des vidéos hors-viewport suspendue ───── */
+  /* Économie de CPU : on pause les vidéos non visibles */
+  var vidOpts = { threshold: 0.1 };
+  var vidIo = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      var vid = e.target;
+      if (e.isIntersecting) {
+        vid.play && vid.play().catch(function(){});
+      } else {
+        vid.pause && vid.pause();
+      }
+    });
+  }, vidOpts);
+
+  document.querySelectorAll('video').forEach(function (v) {
+    /* Ne pas interférer avec la vidéo hero gérée autrement */
+    if (v.id !== 'hero-video') vidIo.observe(v);
+  });
+
+  /* ── Fondu de la vidéo de fond à l'entrée / sortie du chapitre ─── */
+  var chIO = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      var bg = e.target.querySelector(':scope > .chapter-bg');
+      if (bg) bg.classList.toggle('ch-visible', e.isIntersecting);
+    });
+  }, { threshold: 0.02 });
+  document.querySelectorAll('.chapter').forEach(function (c) { chIO.observe(c); });
+
+})();
+</script>
+
+</body>
+</html>
