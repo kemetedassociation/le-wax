@@ -19,7 +19,11 @@
     video { pointer-events: none; }
 
     /* ── Hero video — GPU compositing pour le parallaxe ── */
-    #hero-video { will-change: transform; }
+    #hero-video {
+      will-change: transform;
+      object-fit: contain;
+      background: #080706;
+    }
 
 
     /* ── Typographie ────────────────────────────────── */
@@ -933,7 +937,7 @@
   var heroVid = document.getElementById('hero-video');
   function onScrollHero() {
     if (!heroVid) return;
-    heroVid.style.transform = 'translateY(' + (window.scrollY * 0.18) + 'px) scale(1.06)';
+    heroVid.style.transform = 'translateY(' + (window.scrollY * 0.18) + 'px)';
   }
   window.addEventListener('scroll', onScrollHero, { passive: true });
   onScrollHero(); // apply initial scale so hero never shows letterbox
