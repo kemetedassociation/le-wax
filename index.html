@@ -106,6 +106,17 @@
     .chapter-bg video,
     .chapter-bg img {
       width: 100%; height: 100%; object-fit: cover; display: block;
+      will-change: transform;
+      transform-origin: center center;
+    }
+
+    /* Vignette haute : fondu depuis le noir en entrée de chapitre */
+    .chapter-bg::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 20vh;
+      background: linear-gradient(180deg, rgba(8,7,6,.8) 0%, transparent 100%);
+      pointer-events: none; z-index: 2;
     }
     .chapter-bg-overlay {
       position: absolute; inset: 0;
@@ -479,7 +490,7 @@
 ══════════════════════════════════════════════════ -->
 <section class="chapter" id="origine">
   <div class="chapter-bg">
-    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX9.jpg">
+    <video preload="auto" muted playsinline poster="uploads/WAX9.jpg">
       <source src="uploads/WAXv1.mp4"  type="video/mp4">
     </video>
     <div class="chapter-bg-overlay" style="background:linear-gradient(90deg,rgba(8,7,6,.82) 0%,rgba(8,7,6,.45) 60%,rgba(8,7,6,.1) 100%);"></div>
@@ -513,7 +524,7 @@
 ══════════════════════════════════════════════════ -->
 <section class="chapter" id="thieb">
   <div class="chapter-bg">
-    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX12.jpg">
+    <video preload="auto" muted playsinline poster="uploads/WAX13.jpg">
       <source src="uploads/WAXv3.mp4"  type="video/mp4">
     </video>
     <div class="chapter-bg-overlay" style="background:radial-gradient(ellipse at 30% 60%, rgba(8,7,6,.15), rgba(8,7,6,.7) 60%);"></div>
@@ -549,7 +560,7 @@
 ══════════════════════════════════════════════════ -->
 <section class="chapter" id="yassa">
   <div class="chapter-bg">
-    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX3.jpg">
+    <video preload="auto" muted playsinline poster="uploads/WAX3.jpg">
       <source src="uploads/WAXv9.mp4"  type="video/mp4">
     </video>
     <div class="chapter-bg-overlay" style="background:linear-gradient(90deg,rgba(8,7,6,.1) 0%,rgba(8,7,6,.65) 55%,rgba(8,7,6,.85) 100%);"></div>
@@ -582,7 +593,7 @@
 ══════════════════════════════════════════════════ -->
 <section class="chapter" id="dibi">
   <div class="chapter-bg">
-    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX1.jpg">
+    <video preload="auto" muted playsinline poster="uploads/WAX1.jpg">
       <source src="uploads/WAXv11.mp4"  type="video/mp4">
     </video>
     <div class="chapter-bg-overlay" style="background:radial-gradient(ellipse at 70% 50%, rgba(8,7,6,.2), rgba(8,7,6,.75) 65%);"></div>
@@ -615,7 +626,7 @@
 ══════════════════════════════════════════════════ -->
 <section class="chapter" id="mafe">
   <div class="chapter-bg">
-    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX5.jpg">
+    <video preload="auto" muted playsinline poster="uploads/WAX5.jpg">
       <source src="uploads/WAXv10.mp4"  type="video/mp4">
     </video>
     <div class="chapter-bg-overlay" style="background:linear-gradient(135deg, rgba(8,7,6,.8) 0%, rgba(8,7,6,.3) 50%, rgba(8,7,6,.7) 100%);"></div>
@@ -642,7 +653,7 @@
 ══════════════════════════════════════════════════ -->
 <section class="chapter" id="desserts">
   <div class="chapter-bg">
-    <video preload="metadata" autoplay muted loop playsinline poster="uploads/WAX8.jpg">
+    <video preload="auto" muted playsinline poster="uploads/WAX8.jpg">
       <source src="uploads/WAXv7.mp4"  type="video/mp4">
     </video>
     <div class="chapter-bg-overlay" style="background:linear-gradient(180deg, rgba(8,7,6,.2) 0%, rgba(8,7,6,.6) 60%, rgba(8,7,6,.9) 100%);"></div>
@@ -706,7 +717,7 @@
   <div class="menu-grid" data-reveal>
 
     <div class="menu-card">
-      <img loading="lazy" decoding="async" src="uploads/WAX12.jpg" alt="Thiéboudienne">
+      <img loading="lazy" decoding="async" src="uploads/WAX13.jpg" alt="Thiéboudienne">
       <div class="menu-card-info">
         <div class="menu-card-num">01 · Poisson</div>
         <div class="menu-card-name">Thiéboudienne</div>
@@ -773,7 +784,7 @@
 
   <div class="gallery-masonry" data-reveal>
     <div class="g-cell gc2 gr2">
-      <video preload="metadata" src="uploads/WAXv11.mp4" autoplay muted loop playsinline poster="uploads/WAX12.jpg"></video>
+      <video preload="metadata" src="uploads/WAXv11.mp4" autoplay muted loop playsinline poster="uploads/WAX13.jpg"></video>
     </div>
     <div class="g-cell">
       <img loading="lazy" decoding="async" src="uploads/WAX9.jpg" alt="Homard grillé">
@@ -933,34 +944,85 @@
   /* éléments génériques */
   document.querySelectorAll('[data-reveal]').forEach(function (el) { io.observe(el); });
 
-  /* ── Parallaxe léger sur le hero ──────────────────── */
-  var heroVid = document.getElementById('hero-video');
-  function onScrollHero() {
-    if (!heroVid) return;
-    /* Déplacement vertical seul, sans zoom — vidéo visible en totalité */
-    heroVid.style.transform = 'translate(-50%, calc(-50% + ' + (window.scrollY * 0.06) + 'px))';
-  }
-  window.addEventListener('scroll', onScrollHero, { passive: true });
-  onScrollHero(); // apply initial scale so hero never shows letterbox
+  /* ══════════════════════════════════════════════════
+     CONTRÔLEUR SCROLL IMMERSIF
+     • Hero     : panoramique horizontal + pause sur scroll
+     • Chapitres: lecture frame-par-frame synchronisée au scroll
+                  + panoramique horizontal droite→gauche
+  ═══════════════════════════════════════════════════ */
+  var heroVid  = document.getElementById('hero-video');
+  var chapters = Array.from(document.querySelectorAll('.chapter'));
+  var _raf     = null;
+  var heroCtrl = false; /* basculé en mode scroll dès le 1er défilement */
 
-  /* ── Lecture des vidéos hors-viewport suspendue ───── */
-  /* Économie de CPU : on pause les vidéos non visibles */
+  /* Avancement normalisé 0→1 dans la zone scrollable d'un chapitre */
+  function chProgress(el) {
+    var rect = el.getBoundingClientRect();
+    var h    = el.offsetHeight - window.innerHeight;
+    return h > 0 ? Math.max(0, Math.min(1, -rect.top / h)) : 0;
+  }
+
+  function immersiveTick() {
+    var vh = window.innerHeight;
+
+    /* ── Hero : panoramique horizontal synchrone au scroll ── */
+    if (heroVid) {
+      var hp = Math.max(0, Math.min(1, window.scrollY / vh));
+      /* Légère dérive gauche–droite de 1.5 vw au fil du défilement */
+      heroVid.style.transform =
+        'translate(calc(-50% + ' + ((0.5 - hp) * 1.5) + 'vw), -50%)';
+    }
+
+    /* ── Chapitres : currentTime frame-par-frame + panoramique ─ */
+    chapters.forEach(function (ch) {
+      var vid = ch.querySelector(':scope > .chapter-bg video');
+      if (!vid || !vid.duration) return;
+      var p = chProgress(ch);
+      /* Avancer exactement au frame correspondant au scroll */
+      vid.currentTime = p * vid.duration;
+      /* Panoramique : droite (+2.5 %) → centre → gauche (−2.5 %) */
+      vid.style.transform = 'scale(1.06) translateX(' + ((0.5 - p) * 5) + '%)';
+    });
+
+    _raf = null;
+  }
+
+  window.addEventListener('scroll', function () {
+    /* Dès le premier défilement : pause le hero et bascule en scroll-driven */
+    if (!heroCtrl && heroVid && window.scrollY > 0) {
+      heroCtrl = true;
+      heroVid.pause && heroVid.pause();
+    }
+    if (!_raf) _raf = requestAnimationFrame(immersiveTick);
+  }, { passive: true });
+
+  /* Synchro immédiate dès que les métadonnées vidéo sont disponibles */
+  chapters.forEach(function (ch) {
+    var vid = ch.querySelector(':scope > .chapter-bg video');
+    if (!vid) return;
+    vid.addEventListener('loadedmetadata', function () {
+      vid.currentTime = 0;
+      immersiveTick();
+    });
+  });
+
+  /* Pause/reprise des vidéos de galerie/menu hors viewport (économie CPU) */
   var vidOpts = { threshold: 0.1 };
   var vidIo = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
-      var vid = e.target;
-      if (e.isIntersecting) {
-        vid.play && vid.play().catch(function(){});
-      } else {
-        vid.pause && vid.pause();
-      }
+      var v = e.target;
+      e.isIntersecting
+        ? (v.play && v.play().catch(function () {}))
+        : (v.pause && v.pause());
     });
   }, vidOpts);
-
   document.querySelectorAll('video').forEach(function (v) {
-    /* Ne pas interférer avec la vidéo hero gérée autrement */
-    if (v.id !== 'hero-video') vidIo.observe(v);
+    if (v.id === 'hero-video') return;    /* hero géré par scroll */
+    if (v.closest('.chapter-bg')) return; /* chapitres gérés par scroll */
+    vidIo.observe(v);
   });
+
+  immersiveTick();
 
   /* ── Fondu de la vidéo de fond à l'entrée / sortie du chapitre ─── */
   var chIO = new IntersectionObserver(function (entries) {
