@@ -18,16 +18,8 @@
     /* ── Vidéos décoratives — non interactives ─────────── */
     video { pointer-events: none; }
 
-    /* ── Hero video — centré à taille naturelle ── */
-    #hero-video {
-      will-change: transform;
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: auto; height: auto;
-      max-height: 85vh; max-width: 90vw;
-      object-fit: contain;
-    }
+    /* ── Hero video — GPU compositing pour le parallaxe ── */
+    #hero-video { will-change: transform; }
 
 
     /* ── Typographie ────────────────────────────────── */
@@ -941,7 +933,7 @@
   var heroVid = document.getElementById('hero-video');
   function onScrollHero() {
     if (!heroVid) return;
-    heroVid.style.transform = 'translate(-50%, calc(-50% + ' + (window.scrollY * 0.12) + 'px))';
+    heroVid.style.transform = 'translateY(' + (window.scrollY * 0.18) + 'px) scale(1.06)';
   }
   window.addEventListener('scroll', onScrollHero, { passive: true });
   onScrollHero(); // apply initial scale so hero never shows letterbox
